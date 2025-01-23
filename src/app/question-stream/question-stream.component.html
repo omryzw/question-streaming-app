@@ -1,0 +1,23 @@
+<!-- question-stream.component.html -->
+<div class="question-stream-container">
+    <input 
+      [(ngModel)]="question" 
+      placeholder="Ask your question"
+      (keyup.enter)="askQuestion()"
+    >
+    <button (click)="askQuestion()" [disabled]="isLoading">
+      {{ isLoading ? 'Asking...' : 'Ask' }}
+    </button>
+  
+    <div *ngIf="isLoading" class="loading-spinner">
+      Loading...
+    </div>
+  
+    <div *ngIf="error" class="error-message">
+      {{ error }}
+    </div>
+  
+    <div *ngIf="response" class="response-container">
+      {{ response }}
+    </div>
+  </div>
