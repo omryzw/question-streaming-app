@@ -14,6 +14,24 @@
         </div>
       </div>
 
+      <!-- Follow-up Questions -->
+  <div *ngIf="followUpQuestions.length > 0" class="follow-up-section">
+    <h3 class="follow-up-header">Suggested:</h3>
+    <div class="follow-up-grid">
+      <button 
+        *ngFor="let question of followUpQuestions"
+        class="follow-up-btn"
+        (click)="selectFollowUp(question.fullQuestion)"
+        [attr.aria-label]="'Ask: ' + question.summary"
+      >
+        <div class="btn-content">
+          <!-- <i class="fas fa-comment-dots btn-icon"></i> -->
+          <span class="btn-text">{{ question.summary }}</span>
+        </div>
+      </button>
+    </div>
+  </div>
+
       <!-- Loading Indicator -->
       <div class="message assistant" *ngIf="isLoading">
         <div class="bubble">
@@ -22,6 +40,8 @@
           </div>
         </div>
       </div>
+
+
 
       <!-- Error Message -->
       <div class="error-message" *ngIf="error">

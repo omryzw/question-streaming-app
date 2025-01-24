@@ -31,7 +31,7 @@ export class QuestionStreamComponent {
   private http = inject(HttpClient);
   private ngZone = inject(NgZone);
   
- 
+  followUpQuestions :any = []
   
   private conversationId = '';
   private userId = '';
@@ -41,10 +41,20 @@ export class QuestionStreamComponent {
     this.conversationId  = uuidv4();
     this.userId = uuidv4();
   }
+
+  selectFollowUp(question: string) {
+    this.question = question;
+    this.askQuestion();
+    this.followUpQuestions = [
+     
+    ]; // Clear previous suggestions
+  }
   askQuestion() {
     this.response = '';
     this.error = null;
     this.isLoading = true;
+    // clear the follow-up questions
+    this.followUpQuestions = [];
   
     const requestBody: QuestionRequest = {
       orignalQuestionByUser: this.question,
@@ -67,6 +77,7 @@ export class QuestionStreamComponent {
               if (data.done) {
                 eventSource.close();
                 this.isLoading = false;
+                this.getFollowUpQuestions();
               }
               if (data.error) {
                 throw new Error(data.error);
@@ -99,6 +110,22 @@ export class QuestionStreamComponent {
     this.isLoading = false;
   }
   
+
+  getFollowUpQuestions() {
+    this.http.get<{ }>(`https://mrsmith.onrender.com/followUpQuestions?conversationId=${this.conversationId}`).subscribe({
+      next: (data:any) => {
+        console.log(data)
+        this.ngZone.run(() => { // Wrap in NgZone
+          this.followUpQuestions = data.followUpQuestions.map((question:any) => ({ summary: question.summary, fullQuestion: question.fullQuestion }));
+        });
+      },
+      error: (err) => {
+        console.error('GET request failed:', err);
+        this.error = 'Failed to get follow-up questions';
+      },
+    });
+  }
+
 
 // Frontend Component
 
