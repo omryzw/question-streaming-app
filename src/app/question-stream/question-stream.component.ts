@@ -23,6 +23,7 @@ interface QuestionRequest {
   styleUrl: './question-stream.component.scss'
 })
 export class QuestionStreamComponent {
+  apiURL = 'https://mrsmith.onrender.com';
   question = '';
   response = '';
   isLoading = false;
@@ -63,9 +64,9 @@ export class QuestionStreamComponent {
     };
   
     // First, initialize the stream with POST
-    this.http.post<{ streamId: string }>('https://mrsmith.onrender.com/ask', requestBody).subscribe({
+    this.http.post<{ streamId: string }>(`${this.apiURL}/ask`, requestBody).subscribe({
       next: (data) => {
-        const eventSource = new EventSource(`https://mrsmith.onrender.com/stream/${data.streamId}`);
+        const eventSource = new EventSource(`${this.apiURL}/stream/${data.streamId}`);
 
         eventSource.onmessage = (event) => {
           this.ngZone.run(() => { // Wrap in NgZone
@@ -112,7 +113,7 @@ export class QuestionStreamComponent {
   
 
   getFollowUpQuestions() {
-    this.http.get<{ }>(`https://mrsmith.onrender.com/followUpQuestions?conversationId=${this.conversationId}`).subscribe({
+    this.http.get<{ }>(`${this.apiURL}/followUpQuestions?conversationId=${this.conversationId}`).subscribe({
       next: (data:any) => {
         console.log(data)
         this.ngZone.run(() => { // Wrap in NgZone
