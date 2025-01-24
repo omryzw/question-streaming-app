@@ -2,7 +2,7 @@ import { Component , NgZone,inject} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClientModule, HttpClient } from '@angular/common/http';
-
+import { v4 as uuidv4 } from 'uuid';
 interface StreamResponse {
   token?: string;
   done?: boolean;
@@ -33,9 +33,14 @@ export class QuestionStreamComponent {
   
  
   
-  private conversationId = '31c19f4a-4192-443b-a10d-38f407bcae22';
-  private userId = '31c26e5a-2184-431b-a80d-18f307bcae1';
+  private conversationId = '';
+  private userId = '';
 
+
+  constructor() {
+    this.conversationId  = uuidv4();
+    this.userId = uuidv4();
+  }
   askQuestion() {
     this.response = '';
     this.error = null;

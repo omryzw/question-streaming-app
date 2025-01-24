@@ -6,6 +6,6 @@ export const routes: Routes = [
   { 
     path: '',
     component: QuestionStreamComponent,
-    title: 'Omri'
+    title: 'OM'
   }
 ];
