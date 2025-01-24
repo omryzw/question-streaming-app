@@ -53,9 +53,9 @@ export class QuestionStreamComponent {
     };
   
     // First, initialize the stream with POST
-    this.http.post<{ streamId: string }>('http://localhost:3001/ask', requestBody).subscribe({
+    this.http.post<{ streamId: string }>('https://mrsmith.onrender.com/ask', requestBody).subscribe({
       next: (data) => {
-        const eventSource = new EventSource(`http://localhost:3001/stream/${data.streamId}`);
+        const eventSource = new EventSource(`https://mrsmith.onrender.com/stream/${data.streamId}`);
 
         eventSource.onmessage = (event) => {
           this.ngZone.run(() => { // Wrap in NgZone
