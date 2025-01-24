@@ -6,6 +6,6 @@ export const routes: Routes = [
   { 
     path: '',
     component: QuestionStreamComponent,
-    title: 'ChatGPT Clone'
+    title: 'Omri'
   }
 ];
