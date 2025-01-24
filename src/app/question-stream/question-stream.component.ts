@@ -1,14 +1,20 @@
-import { Component } from '@angular/core';
+import { Component , NgZone} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClientModule, HttpClient } from '@angular/common/http';
+
 interface StreamResponse {
   token?: string;
   done?: boolean;
   error?: string;
 }
 
-import { Observable } from 'rxjs';
+interface QuestionRequest {
+  orignalQuestionByUser: string;
+  conversationId: string;
+  userId: string;
+}
+
 @Component({
   selector: 'app-question-stream',
   standalone: true,
@@ -17,54 +23,75 @@ import { Observable } from 'rxjs';
   styleUrl: './question-stream.component.css'
 })
 export class QuestionStreamComponent {
-  // Same implementation as previous artifact
   question = '';
   response = '';
   isLoading = false;
   error: string | null = null;
 
-  constructor(private http: HttpClient) {}
+  private conversationId = '31c19f4a-4192-443b-a10d-38f407bcae22';
+  private userId = '31c26e5a-2184-431b-a80d-18f307bcae1';
+
+  constructor(private http: HttpClient, private ngZone: NgZone) {}
 
   askQuestion() {
-    // Reset previous state
     this.response = '';
     this.error = null;
     this.isLoading = true;
-
-    // Create EventSource for streaming
-    const eventSource = new EventSource(this.getStreamUrl());
-
-    eventSource.onmessage = (event) => {
-      const data: StreamResponse = JSON.parse(event.data);
-
-      if (data.token) {
-        // Append streaming tokens
-        this.response += data.token;
-      }
-
-      if (data.done) {
-        // Stream completed
-        eventSource.close();
-        this.isLoading = false;
-      }
-
-      if (data.error) {
-        // Handle errors
-        this.error = data.error;
-        eventSource.close();
-        this.isLoading = false;
-      }
+  
+    const requestBody: QuestionRequest = {
+      orignalQuestionByUser: this.question,
+      conversationId: this.conversationId,
+      userId: this.userId,
     };
+  
+    // First, initialize the stream with POST
+    this.http.post<{ streamId: string }>('http://localhost:3001/ask', requestBody).subscribe({
+      next: (data) => {
+        const eventSource = new EventSource(`http://localhost:3001/stream/${data.streamId}`);
 
-    eventSource.onerror = (error) => {
-      console.error('EventSource failed:', error);
-      this.error = 'Connection error';
-      eventSource.close();
-      this.isLoading = false;
-    };
-  }
+        eventSource.onmessage = (event) => {
+          this.ngZone.run(() => { // Wrap in NgZone
+            try {
+              const data: StreamResponse = JSON.parse(event.data);
+              if (data.token) {
+                this.response += data.token; // Angular now detects this change
+              }
+              if (data.done) {
+                eventSource.close();
+                this.isLoading = false;
+              }
+              if (data.error) {
+                throw new Error(data.error);
+              }
+            } catch (err) {
+              this.handleError(err, eventSource);
+            }
+          });
+        };
+  
+        eventSource.onerror = (error) => {
+          this.ngZone.run(() => { // Wrap in NgZone
+            this.handleError('EventSource error', eventSource);
+          });
+        };
+      
 
-  private getStreamUrl(): string {
-    return 'http://localhost:3001/ask';
+        },
+        error: (err) => {
+          console.error('POST request failed:', err);
+          this.error = 'Failed to initialize the stream';
+          this.isLoading = false;
+        },
+      });
   }
+  private handleError(error: any, eventSource: EventSource) {
+    console.error(error);
+    this.error = error instanceof Error ? error.message : 'Connection error';
+    eventSource.close();
+    this.isLoading = false;
+  }
+  
+
+// Frontend Component
+
 }

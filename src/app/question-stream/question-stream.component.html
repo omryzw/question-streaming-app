@@ -1,23 +1,39 @@
-<!-- question-stream.component.html -->
 <div class="question-stream-container">
     <input 
       [(ngModel)]="question" 
       placeholder="Ask your question"
-      (keyup.enter)="askQuestion()"
+      (keyup.enter)="askQuestion()" 
+      class="question-input" 
+      [disabled]="isLoading" 
+      aria-label="Enter your question"
     >
-    <button (click)="askQuestion()" [disabled]="isLoading">
+  
+    <button 
+      (click)="askQuestion()" 
+      [disabled]="isLoading || !question.trim()" 
+      class="ask-button"
+      [attr.aria-busy]="isLoading ? 'true' : 'false'"
+    >
+      <!-- Add icon before text -->
+      <i class="fa-solid fa-comment-dots"></i>
       {{ isLoading ? 'Asking...' : 'Ask' }}
     </button>
   
-    <div *ngIf="isLoading" class="loading-spinner">
+    <!-- Updated loading spinner with icon -->
+    <div *ngIf="isLoading" class="loading-spinner" role="status" aria-live="polite">
+      <i class="fa-solid fa-spinner fa-spin"></i>
       Loading...
     </div>
   
-    <div *ngIf="error" class="error-message">
+    <!-- Enhanced error message with icon -->
+    <div *ngIf="error" class="error-message" role="alert">
+      <i class="fa-solid fa-triangle-exclamation"></i>
       {{ error }}
     </div>
   
+    <!-- Response container with subtle icon -->
     <div *ngIf="response" class="response-container">
-      {{ response }}
+      <i class="fa-solid fa-robot"></i>
+      <p>{{ response }}</p>
     </div>
   </div>
