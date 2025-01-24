@@ -1,4 +1,4 @@
-import { Component , NgZone} from '@angular/core';
+import { Component , NgZone,inject} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClientModule, HttpClient } from '@angular/common/http';
@@ -20,7 +20,7 @@ interface QuestionRequest {
   standalone: true,
   imports: [CommonModule, FormsModule, HttpClientModule],
   templateUrl: './question-stream.component.html',
-  styleUrl: './question-stream.component.css'
+  styleUrl: './question-stream.component.scss'
 })
 export class QuestionStreamComponent {
   question = '';
@@ -28,10 +28,13 @@ export class QuestionStreamComponent {
   isLoading = false;
   error: string | null = null;
 
+  private http = inject(HttpClient);
+  private ngZone = inject(NgZone);
+  
+ 
+  
   private conversationId = '31c19f4a-4192-443b-a10d-38f407bcae22';
   private userId = '31c26e5a-2184-431b-a80d-18f307bcae1';
-
-  constructor(private http: HttpClient, private ngZone: NgZone) {}
 
   askQuestion() {
     this.response = '';
