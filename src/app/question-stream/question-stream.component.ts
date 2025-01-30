@@ -1,8 +1,10 @@
-import { Component , NgZone,inject} from '@angular/core';
+import { Component , NgZone,inject,signal} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClientModule, HttpClient } from '@angular/common/http';
+import { MarkdownRendererService } from '../services/markdown-renderer.service';
 import { v4 as uuidv4 } from 'uuid';
+import { SafeHtmlPipe } from '../pipes/safe-html.pipe';
 interface StreamResponse {
   token?: string;
   done?: boolean;
@@ -18,17 +20,22 @@ interface QuestionRequest {
 @Component({
   selector: 'app-question-stream',
   standalone: true,
-  imports: [CommonModule, FormsModule, HttpClientModule],
+  imports: [CommonModule, FormsModule, HttpClientModule,SafeHtmlPipe],
   templateUrl: './question-stream.component.html',
   styleUrl: './question-stream.component.scss'
 })
 export class QuestionStreamComponent {
   // apiURL = 'https://mrsmith.onrender.com';
   apiURL = 'http://localhost:3001';
-  question = '';
-  response = '';
-  isLoading = false;
-  error: string | null = null;
+  // question = '';
+  // response = '';
+  // isLoading = false;
+  // error: string | null = null;
+
+  question = signal('');
+  response = signal('');
+  isLoading = signal(false);
+  error = signal('');
 
   private http = inject(HttpClient);
   private ngZone = inject(NgZone);
@@ -39,78 +46,109 @@ export class QuestionStreamComponent {
   private userId = '';
 
 
-  constructor() {
+  constructor(public mdRenderer: MarkdownRendererService) {
     this.conversationId  = uuidv4();
     this.userId = uuidv4();
+    // this.streamResponse("hello")
   }
 
   selectFollowUp(question: string) {
-    this.question = question;
-    this.askQuestion();
+    this.question.set(question) ;
+    // this.askQuestion();
     this.followUpQuestions = [
      
     ]; // Clear previous suggestions
   }
-  askQuestion() {
-    this.response = '';
-    this.error = null;
-    this.isLoading = true;
-    // clear the follow-up questions
-    this.followUpQuestions = [];
   
-    const requestBody: QuestionRequest = {
-      orignalQuestionByUser: this.question,
-      conversationId: this.conversationId,
-      userId: this.userId,
-    };
-  
-    // First, initialize the stream with POST
-    this.http.post<{ streamId: string }>(`${this.apiURL}/ask`, requestBody).subscribe({
-      next: (data) => {
-        const eventSource = new EventSource(`${this.apiURL}/stream/${data.streamId}`);
+  async streamResponse() {
 
-        eventSource.onmessage = (event) => {
-          this.ngZone.run(() => { // Wrap in NgZone
-            try {
-              const data: StreamResponse = JSON.parse(event.data);
-              if (data.token) {
-                this.response += data.token; // Angular now detects this change
-              }
-              if (data.done) {
-                eventSource.close();
-                this.isLoading = false;
-                this.getFollowUpQuestions();
-              }
-              if (data.error) {
-                throw new Error(data.error);
-              }
-            } catch (err) {
-              this.handleError(err, eventSource);
-            }
-          });
-        };
-  
-        eventSource.onerror = (error) => {
-          this.ngZone.run(() => { // Wrap in NgZone
-            this.handleError('EventSource error', eventSource);
-          });
-        };
-      
+    this.isLoading.set(true);
+    this.response.set('');
+    this.error.set('');
 
-        },
-        error: (err) => {
-          console.error('POST request failed:', err);
-          this.error = 'Failed to initialize the stream';
-          this.isLoading = false;
-        },
+    try {
+      const response = await fetch('http://localhost:11434/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'deepseek-r1:32b',
+          prompt: this.question(),
+          stream: true // Ensure streaming is enabled
+        })
       });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      const processStream = async () => {
+        if (!reader) return;
+
+        while (true) {
+          const { done, value } = await reader.read();
+          
+          if (done) {
+            this.ngZone.run(() => {
+              this.isLoading.set(false);
+              // Add any completion logic here
+            });
+            break;
+          }
+
+          buffer += decoder.decode(value, { stream: true });
+          const parts = buffer.split('\n');
+          buffer = parts.pop() || ''; // Save incomplete chunk
+
+          for (const part of parts) {
+            const trimmed = part.trim();
+            if (!trimmed) continue;
+
+            try {
+              const data = JSON.parse(trimmed);
+              this.ngZone.run(() => {
+                if (data.response) {
+                  this.response += data.response;
+                }
+                if (data.done) {
+                  this.isLoading.set(false);
+                  // this.getFollowUpQuestions(); // Your completion method
+                }
+                if (data.error) {
+                  throw new Error(data.error);
+                }
+              });
+            } catch (err) {
+              this.ngZone.run(() => this.handleError(err));
+            }
+          }
+        }
+      };
+
+      await processStream();
+    } catch (err) {
+      this.ngZone.run(() => this.handleError(err));
+    }
   }
-  private handleError(error: any, eventSource: EventSource) {
+
+  private handleError(error: any) {
+    console.error('Stream error:', error);
+    this.isLoading.set( false);
+    this.error = error.message || 'Error processing stream';
+  }
+
+
+  private handleErrorog(error: any, eventSource: EventSource) {
     console.error(error);
-    this.error = error instanceof Error ? error.message : 'Connection error';
+    this.error.set( error instanceof Error ? error.message : 'Connection error');
     eventSource.close();
-    this.isLoading = false;
+    this.isLoading.set( false);
   }
+
+  
   
 
   getFollowUpQuestions() {
@@ -123,7 +161,7 @@ export class QuestionStreamComponent {
       },
       error: (err) => {
         console.error('GET request failed:', err);
-        this.error = 'Failed to get follow-up questions';
+        this.error.set('Failed to get follow-up questions');
       },
     });
   }
