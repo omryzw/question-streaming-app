@@ -23,7 +23,8 @@ interface QuestionRequest {
   styleUrl: './question-stream.component.scss'
 })
 export class QuestionStreamComponent {
-  apiURL = 'https://mrsmith.onrender.com';
+  // apiURL = 'https://mrsmith.onrender.com';
+  apiURL = 'http://localhost:3001';
   question = '';
   response = '';
   isLoading = false;
